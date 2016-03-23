@@ -1,6 +1,7 @@
 require 'socket'
 require 'fileutils'
 require 'securerandom'
+require 'test_queue/runner/delegate'
 
 module TestQueue
   class Worker
@@ -23,6 +24,7 @@ module TestQueue
 
   class Runner
     attr_accessor :concurrency
+    attr_accessor :delegate
 
     def initialize(queue, concurrency=nil, socket=nil, relay=nil)
       raise ArgumentError, 'array required' unless Array === queue
@@ -133,14 +135,11 @@ module TestQueue
         end
       end
 
-      summarize
+      delegate && delegate.summarize(@completed)
 
       estatus = @completed.inject(0){ |s, worker| s + worker.status.exitstatus }
       estatus = 255 if estatus > 255
       exit!(estatus)
-    end
-
-    def summarize
     end
 
     def stats_file
@@ -154,7 +153,7 @@ module TestQueue
 
     def execute_parallel
       start_master
-      prepare(@concurrency)
+      delegate && delegate.prepare(@concurrency)
       @prepared_time = Time.now
       start_relay if relay?
       spawn_workers
@@ -217,10 +216,15 @@ module TestQueue
         pid = fork do
           @server.close if @server
 
-          iterator = Iterator.new(relay?? @relay : @socket, @suites, method(:around_filter))
+          filter = if delegate
+                     delegate.method(:around_filter)
+                   else
+                     lambda { |suite, &block| block.call }
+                   end
+          iterator = Iterator.new(relay?? @relay : @socket, @suites, filter)
           after_fork_internal(num, iterator)
           ret = run_worker(iterator) || 0
-          cleanup_worker
+          delegate && delegate.cleanup_worker
           Kernel.exit! ret
         end
 
@@ -242,21 +246,7 @@ module TestQueue
       puts "==> Starting #$0 (#{Process.pid} on #{Socket.gethostname}) - iterating over #{iterator.sock}"
       puts
 
-      after_fork(num)
-    end
-
-    # Run in the master before the fork. Used to create
-    # concurrency copies of any databases required by the
-    # test workers.
-    def prepare(concurrency)
-    end
-
-    def around_filter(suite)
-      yield
-    end
-
-    # Prepare a worker for executing jobs after a fork.
-    def after_fork(num)
+      delegate && delegate.after_fork(num)
     end
 
     # Entry point for internal runner implementations. The iterator will yield
@@ -270,9 +260,6 @@ module TestQueue
       end
 
       return 0 # exit status
-    end
-
-    def cleanup_worker
     end
 
     def summarize_worker(worker)
@@ -304,6 +291,7 @@ module TestQueue
       return if @aborting
       @completed << worker
       puts worker.output if ENV['TEST_QUEUE_VERBOSE'] || worker.status.exitstatus != 0
+      delegate && delegate.worker_completed(worker)
     end
 
     def distribute_queue
@@ -311,7 +299,7 @@ module TestQueue
       remote_workers = 0
 
       until @queue.empty? && remote_workers == 0
-        queue_status(@start_time, @queue.size, @workers.size, remote_workers)
+        delegate && delegate.queue_status(@start_time, @queue.size, @workers.size, remote_workers)
 
         if IO.select([@server], nil, nil, 0.1).nil?
           reap_worker(false) if @workers.any? # check for worker deaths
@@ -408,26 +396,6 @@ module TestQueue
       @aborting = true
       kill_workers
       Kernel::abort("Aborting: #{message}")
-    end
-
-    # Subclasses can override to monitor the status of the queue.
-    #
-    # For example, you may want to record metrics about how quickly remote
-    # workers connect, or abort the build if not enough connect.
-    #
-    # This method is called very frequently during the test run, so don't do
-    # anything expensive/blocking.
-    #
-    # This method is not called on remote masters when using remote workers,
-    # only on the central master.
-    #
-    # start_time          - Time when the test run began
-    # queue_size          - Integer number of suites left in the queue
-    # local_worker_count  - Integer number of active local workers
-    # remote_worker_count - Integer number of active remote workers
-    #
-    # Returns nothing.
-    def queue_status(start_time, queue_size, local_worker_count, remote_worker_count)
     end
   end
 end
