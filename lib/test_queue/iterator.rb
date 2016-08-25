@@ -4,7 +4,7 @@ module TestQueue
 
     def initialize(sock, suites, filter=nil, early_failure_limit: nil)
       @done = false
-      @stats = {}
+      @stats = []
       @procline = $0
       @sock = sock
       @filter = filter
@@ -51,7 +51,7 @@ module TestQueue
           else
             yield suite
           end
-          @stats[suite_name] = Time.now - start
+          @stats << TestQueue::Stats::Suite.new(suite_name, file, Time.now - start, Time.now)
           @failures += suite.failure_count if suite.respond_to? :failure_count
         else
           break

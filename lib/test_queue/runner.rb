@@ -1,6 +1,7 @@
 require 'socket'
 require 'fileutils'
 require 'securerandom'
+require 'test_queue/stats'
 
 module TestQueue
   class Worker
@@ -13,7 +14,7 @@ module TestQueue
       @num = num
       @start_time = Time.now
       @output = ''
-      @stats = {}
+      @stats = Stats.new(stats_file)
     end
 
     def lines
@@ -23,6 +24,7 @@ module TestQueue
 
   class Runner
     attr_accessor :concurrency, :exit_when_done
+    attr_reader :stats
 
     def initialize(queue, concurrency=nil, socket=nil, relay=nil)
       raise ArgumentError, 'array required' unless Array === queue
@@ -87,16 +89,6 @@ module TestQueue
       @exit_when_done = true
     end
 
-    def stats
-      # FIXME: Store filename in here too.
-      @stats ||=
-        if File.exists?(file = stats_file)
-          Marshal.load(IO.binread(file)) || {}
-        else
-          {}
-        end
-    end
-
     # Run the tests.
     #
     # If exit_when_done is true, exit! will be called before this method
@@ -125,6 +117,7 @@ module TestQueue
 
       @failures = ''
       @completed.each do |worker|
+        stats.record_suites(worker.stats)
         summarize_worker(worker)
         @failures << worker.failure_output if worker.failure_output
 
@@ -148,11 +141,7 @@ module TestQueue
 
       puts
 
-      if @stats
-        File.open(stats_file, 'wb') do |f|
-          f.write Marshal.dump(stats)
-        end
-      end
+      @stats.save
 
       summarize
 
