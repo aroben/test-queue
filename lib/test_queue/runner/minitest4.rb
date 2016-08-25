@@ -57,12 +57,29 @@ module TestQueue
     class MiniTest < Runner
       def initialize
         tests = ::MiniTest::Unit::TestCase.original_test_suites.sort_by{ |s| -(stats[s.to_s] || 0) }
-        super(tests)
+        queue = ::MiniTest::Unit::TestCase.original_test_suites
+          .sort_by { |s| -(stats[s.to_s] || 0) }
+          .map { |s| [s, suite_file(s)] }
+        super(queue)
       end
 
       def run_worker(iterator)
         ::MiniTest::Unit::TestCase.test_suites = iterator
         ::MiniTest::Unit.new.run
+      end
+
+      def discover_new_suites
+        ARGV.each do |arg|
+          ::MiniTest::Unit::TestCase.reset
+          require arg
+          ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
+            yield suite.name, suite_file(suite)
+          end
+        end
+      end
+
+      def suite_file(suite)
+        suite.instance_method(suite.test_methods.first).source_location[0]
       end
     end
   end

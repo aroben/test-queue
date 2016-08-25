@@ -7,7 +7,6 @@ module TestQueue
       @stats = {}
       @procline = $0
       @sock = sock
-      @suites = suites
       @filter = filter
       if @sock =~ /^(.+):(\d+)$/
         @tcp_address = $1
@@ -38,7 +37,12 @@ module TestQueue
           client.close
           item = Marshal.load(data)
           break if item.nil? || item.empty?
-          suite = @suites[item]
+          next if item == "WAIT"
+          suite_name, file = item
+          suite = load_suite(suite_name, file)
+
+          # Maybe we were told to load a suite that doesn't exist anymore.
+          next unless suite
 
           $0 = "#{@procline} - #{suite.respond_to?(:description) ? suite.description : suite}"
           start = Time.now
@@ -47,8 +51,7 @@ module TestQueue
           else
             yield suite
           end
-          key = suite.respond_to?(:id) ? suite.id : suite.to_s
-          @stats[key] = Time.now - start
+          @stats[suite_name] = Time.now - start
           @failures += suite.failure_count if suite.respond_to? :failure_count
         else
           break
@@ -79,6 +82,18 @@ module TestQueue
 
     def empty?
       false
+    end
+
+    def load_suite(suite_name, file)
+      @suites ||= {}
+      suite = @suites[suite_name]
+      return suite if suite
+      ::MiniTest::Unit::TestCase.reset
+      require file
+      ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
+        @suites[suite.name] = suite
+      end
+      @suites[suite_name]
     end
   end
 end

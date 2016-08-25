@@ -30,8 +30,8 @@ module TestQueue
       if forced = ENV['TEST_QUEUE_FORCE']
         forced = forced.split(/\s*,\s*/)
         whitelist = Set.new(forced)
-        queue = queue.select{ |s| whitelist.include?(s.to_s) }
-        queue.sort_by!{ |s| forced.index(s.to_s) }
+        queue = queue.select{ |s, f| whitelist.include?(s) }
+        queue.sort_by!{ |s, f| forced.index(s) }
       end
 
       if ENV['TEST_QUEUE_EARLY_FAILURE_LIMIT']
@@ -43,11 +43,8 @@ module TestQueue
       end
 
       @procline = $0
-      @suites = queue.inject(Hash.new) do |hash, suite|
-        key = suite.respond_to?(:id) ? suite.id : suite.to_s
-        hash.update key => suite
-      end
-      @queue = @suites.keys
+      # FIXME: Populate this from stats too.
+      @queue = queue
 
       @workers = {}
       @completed = []
@@ -91,6 +88,7 @@ module TestQueue
     end
 
     def stats
+      # FIXME: Store filename in here too.
       @stats ||=
         if File.exists?(file = stats_file)
           Marshal.load(IO.binread(file)) || {}
@@ -172,6 +170,7 @@ module TestQueue
     end
 
     def execute_sequential
+      discover_new_suites_sequential
       run_worker(@queue)
     end
 
@@ -180,6 +179,7 @@ module TestQueue
       prepare(@concurrency)
       @prepared_time = Time.now
       start_relay if relay?
+      discover_new_suites_parallel
       spawn_workers
       distribute_queue
     ensure
@@ -240,7 +240,7 @@ module TestQueue
         pid = fork do
           @server.close if @server
 
-          iterator = Iterator.new(relay?? @relay : @socket, @suites, method(:around_filter), early_failure_limit: @early_failure_limit)
+          iterator = Iterator.new(relay?? @relay : @socket, method(:around_filter), early_failure_limit: @early_failure_limit)
           after_fork_internal(num, iterator)
           ret = run_worker(iterator) || 0
           cleanup_worker
@@ -249,6 +249,30 @@ module TestQueue
 
         @workers[pid] = Worker.new(pid, num)
       end
+    end
+
+    def discover_new_suites_parallel
+      fork do
+        discover_new_suites do |suite_name, filename|
+          @server.connect_address.connect do |sock|
+            sock.puts("NEW SUITE #{Marshal.dump([suite_name, filename])}")
+          end
+        end
+
+        @server.connect_address.connect do |sock|
+          sock.puts("NO MORE SUITES")
+        end
+      end
+    end
+
+    def discover_new_suites_sequential
+      discover_new_suites do |suite_name, filename|
+        @queue.unshift [suite_name, filename]
+      end
+    end
+
+    def load_and_report_tests(writer)
+      writer.close
     end
 
     def after_fork_internal(num, iterator)
@@ -331,12 +355,14 @@ module TestQueue
     def distribute_queue
       return if relay?
       remote_workers = 0
+      more_suites = true
 
-      until @queue.empty? && remote_workers == 0
+      until !more_suites && @queue.empty? && remote_workers == 0
         queue_status(@start_time, @queue.size, @workers.size, remote_workers)
 
         if IO.select([@server], nil, nil, 0.1).nil?
           reap_worker(false) if @workers.any? # check for worker deaths
+          next
         else
           sock = @server.accept
           cmd = sock.gets.strip
@@ -344,8 +370,10 @@ module TestQueue
           when /^POP/
             # If we have a slave from a different test run, don't respond, and it will consider the test run done.
             if obj = @queue.shift
-              data = Marshal.dump(obj.to_s)
+              data = Marshal.dump(obj)
               sock.write(data)
+            elsif more_suites
+              sock.write(Marshal.dump("WAIT"))
             end
           when /^SLAVE (\d+) ([\w\.-]+) (\w+)(?: (.+))?/
             num = $1.to_i
@@ -368,6 +396,11 @@ module TestQueue
             worker = Marshal.load(data)
             worker_completed(worker)
             remote_workers -= 1
+          when /^NEW SUITE (.+)/
+            suite_name, filename = Marshal.load($1)
+            @queue.unshift [suite_name, filename]
+          when /^NO MORE SUITES$/
+            more_suites = false
           when /^KABOOM/
             # worker reporting an abnormal number of test failures;
             # stop everything immediately and report the results.
