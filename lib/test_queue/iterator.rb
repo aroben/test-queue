@@ -85,6 +85,7 @@ module TestQueue
     end
 
     def load_suite(suite_name, file)
+      # FIXME: This MiniTest code doesn't belong here
       @suites ||= {}
       suite = @suites[suite_name]
       return suite if suite
