@@ -45,7 +45,9 @@ module TestQueue
       end
 
       @procline = $0
-      # FIXME: Populate this from stats too.
+      # FIXME: Populate this from stats too. Not sure what it means to have a
+      # queue passed in and also have the stats data; maybe we don't need one
+      # passed in anymore?
       @queue = queue
 
       @workers = {}
