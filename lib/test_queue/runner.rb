@@ -14,7 +14,7 @@ module TestQueue
       @num = num
       @start_time = Time.now
       @output = ''
-      @stats = Stats.new(stats_file)
+      @stats = []
     end
 
     def lines
@@ -89,6 +89,8 @@ module TestQueue
       end
 
       @exit_when_done = true
+
+      @stats = Stats.new(stats_file)
     end
 
     # Run the tests.

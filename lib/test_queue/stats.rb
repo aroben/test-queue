@@ -8,13 +8,15 @@ module TestQueue
         @path = path
         @last_duration = last_duration
         @last_seen_at = last_seen_at
+
+        freeze
       end
     end
 
     def initialize(path)
       @path = path
       @suites = {}
-      self.load
+      load
     end
 
     def all_suites
@@ -34,25 +36,26 @@ module TestQueue
     def save
       prune
 
-      data = @suites.each_value.map do |suite|
+      suites = @suites.each_value.map do |suite|
         [suite.name, suite.path, suite.last_duration, suite.last_seen_at]
       end
 
       File.open(@path, 'wb') do |f|
-        f.write Marshal.dump(data)
+        f.write Marshal.dump({ :version => CURRENT_VERSION, :suites => suites })
       end
     end
 
     private
 
+    CURRENT_VERSION = 1
+
     def load
       data = begin
-               # FIXME: Need to handle reading an old format
                Marshal.load(IO.binread(@path))
              rescue Errno::ENOENT
              end
-      return unless data
-      data.each do |name, path, last_duration, last_seen_at|
+      return unless data && data.is_a?(Hash) && data[:version] == CURRENT_VERSION
+      data[:suites].each do |name, path, last_duration, last_seen_at|
         @suites[name] = Suite.new(name, path, last_duration, last_seen_at)
       end
     end
