@@ -59,7 +59,7 @@ module TestQueue
         tests = ::MiniTest::Unit::TestCase.original_test_suites.sort_by{ |s| -(stats[s.to_s] || 0) }
         queue = ::MiniTest::Unit::TestCase.original_test_suites
           .sort_by { |s| -(stats[s.to_s] || 0) }
-          .map { |s| [s, suite_file(s)] }
+          .map { |s| [s, @test_framework.suite_file(s)] }
         super(queue)
       end
 
@@ -67,24 +67,20 @@ module TestQueue
         ::MiniTest::Unit::TestCase.test_suites = iterator
         ::MiniTest::Unit.new.run
       end
-
-      def discover_new_suites
-        ARGV.each do |arg|
-          ::MiniTest::Unit::TestCase.reset
-          require arg
-          ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
-            yield suite.name, suite_file(suite)
-          end
-        end
-      end
-
-      def suite_file(suite)
-        suite.instance_method(suite.test_methods.first).source_location[0]
-      end
     end
   end
 
   class TestFramework
+    def discover_suites
+      ARGV.each do |arg|
+        ::MiniTest::Unit::TestCase.reset
+        require arg
+        ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
+          yield suite.name, suite_file(suite)
+        end
+      end
+    end
+
     def load_suite(suite_name, path)
       @suites ||= {}
 
@@ -97,6 +93,10 @@ module TestQueue
         @suites[suite.name] = suite
       end
       @suites[suite_name]
+    end
+
+    def suite_file(suite)
+      suite.instance_method(suite.test_methods.first).source_location[0]
     end
   end
 end

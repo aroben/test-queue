@@ -165,7 +165,7 @@ module TestQueue
     end
 
     def execute_sequential
-      discover_new_suites_sequential
+      discover_suites_sequential
       run_worker(@queue)
     end
 
@@ -174,7 +174,7 @@ module TestQueue
       prepare(@concurrency)
       @prepared_time = Time.now
       start_relay if relay?
-      discover_new_suites_parallel
+      discover_suites_parallel
       spawn_workers
       distribute_queue
     ensure
@@ -246,9 +246,9 @@ module TestQueue
       end
     end
 
-    def discover_new_suites_parallel
+    def discover_suites_parallel
       fork do
-        discover_new_suites do |suite_name, filename|
+        discover_suites do |suite_name, filename|
           @server.connect_address.connect do |sock|
             sock.puts("NEW SUITE #{Marshal.dump([suite_name, filename])}")
           end
@@ -260,9 +260,16 @@ module TestQueue
       end
     end
 
-    def discover_new_suites_sequential
-      discover_new_suites do |suite_name, filename|
+    def discover_suites_sequential
+      discover_suites do |suite_name, filename|
         @queue.unshift [suite_name, filename]
+      end
+    end
+
+    def discover_suites
+      @test_framework.discover_suites do |suite_name, filename|
+        # FIXME: Need to filter out suites that we already know about from @stats.
+        yield suite_name, filename
       end
     end
 
