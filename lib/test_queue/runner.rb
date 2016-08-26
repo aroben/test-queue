@@ -11,7 +11,7 @@ module TestQueue
     attr_accessor :summary, :failure_output
 
     # Array of TestQueue::Stats::Suite recording all the suites this worker ran.
-    attr_reader :suites
+    attr_accessor :suites
 
     def initialize(pid, num)
       @pid = pid
