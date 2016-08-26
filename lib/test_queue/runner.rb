@@ -264,10 +264,6 @@ module TestQueue
       end
     end
 
-    def load_and_report_tests(writer)
-      writer.close
-    end
-
     def after_fork_internal(num, iterator)
       srand
 
