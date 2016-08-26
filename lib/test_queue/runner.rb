@@ -251,6 +251,7 @@ module TestQueue
     end
 
     def discover_suites_parallel
+      return if relay?
       fork do
         discover_suites do |suite_name, filename|
           @server.connect_address.connect do |sock|
