@@ -71,6 +71,12 @@ module TestQueue
 
   class TestFramework
     def discover_suites
+      # Yield any suites that were already loaded (e.g., when autorunning via
+      # `ruby some_test.rb`).
+      ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
+        yield suite.name, suite_file(suite)
+      end
+
       ARGV.each do |arg|
         ::MiniTest::Unit::TestCase.reset
         require arg
