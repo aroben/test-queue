@@ -261,6 +261,8 @@ module TestQueue
         @server.connect_address.connect do |sock|
           sock.puts("NO MORE SUITES")
         end
+
+        Kernel.exit!
       end
     end
 
