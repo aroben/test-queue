@@ -127,7 +127,7 @@ module TestQueue
 
       @failures = ''
       @completed.each do |worker|
-        stats.record_suites(worker.stats)
+        stats.record_suites(worker.suites)
         summarize_worker(worker)
         @failures << worker.failure_output if worker.failure_output
 
