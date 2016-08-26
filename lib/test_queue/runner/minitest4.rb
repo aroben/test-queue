@@ -93,7 +93,11 @@ module TestQueue
       return suite if suite
 
       ::MiniTest::Unit::TestCase.reset
-      require path
+      begin
+        require path
+      rescue LoadError
+        return nil
+      end
       ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
         @suites[suite.name] = suite
       end
