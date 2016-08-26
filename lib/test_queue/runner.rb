@@ -252,6 +252,7 @@ module TestQueue
 
     def discover_suites_parallel
       return if relay?
+      @discovering_suites = true
       fork do
         discover_suites do |suite_name, filename|
           @server.connect_address.connect do |sock|
@@ -361,9 +362,8 @@ module TestQueue
     def distribute_queue
       return if relay?
       remote_workers = 0
-      more_suites = true
 
-      until !more_suites && @queue.empty? && remote_workers == 0
+      until !@discovering_suites && @queue.empty? && remote_workers == 0
         queue_status(@start_time, @queue.size, @workers.size, remote_workers)
 
         if IO.select([@server], nil, nil, 0.1).nil?
@@ -378,7 +378,7 @@ module TestQueue
             if obj = @queue.shift
               data = Marshal.dump(obj)
               sock.write(data)
-            elsif more_suites
+            elsif @discovering_suites
               sock.write(Marshal.dump("WAIT"))
             end
           when /^SLAVE (\d+) ([\w\.-]+) (\w+)(?: (.+))?/
@@ -406,7 +406,7 @@ module TestQueue
             suite_name, filename = Marshal.load($1)
             @queue.unshift [suite_name, filename]
           when /^NO MORE SUITES$/
-            more_suites = false
+            @discovering_suites = false
           when /^KABOOM/
             # worker reporting an abnormal number of test failures;
             # stop everything immediately and report the results.
