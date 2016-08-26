@@ -2,7 +2,8 @@ module TestQueue
   class Iterator
     attr_reader :stats, :sock
 
-    def initialize(sock, suites, filter=nil, early_failure_limit: nil)
+    def initialize(test_framework, sock, suites, filter=nil, early_failure_limit: nil)
+      @test_framework = test_framework
       @done = false
       @stats = []
       @procline = $0
@@ -39,7 +40,7 @@ module TestQueue
           break if item.nil? || item.empty?
           next if item == "WAIT"
           suite_name, file = item
-          suite = load_suite(suite_name, file)
+          suite = @test_framework.load_suite(suite_name, file)
 
           # Maybe we were told to load a suite that doesn't exist anymore.
           next unless suite
@@ -82,19 +83,6 @@ module TestQueue
 
     def empty?
       false
-    end
-
-    def load_suite(suite_name, file)
-      # FIXME: This MiniTest code doesn't belong here
-      @suites ||= {}
-      suite = @suites[suite_name]
-      return suite if suite
-      ::MiniTest::Unit::TestCase.reset
-      require file
-      ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
-        @suites[suite.name] = suite
-      end
-      @suites[suite_name]
     end
   end
 end

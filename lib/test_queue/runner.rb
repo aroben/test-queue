@@ -2,6 +2,7 @@ require 'socket'
 require 'fileutils'
 require 'securerandom'
 require 'test_queue/stats'
+require 'test_queue/test_framework'
 
 module TestQueue
   class Worker
@@ -28,6 +29,9 @@ module TestQueue
 
     def initialize(queue, concurrency=nil, socket=nil, relay=nil)
       raise ArgumentError, 'array required' unless Array === queue
+
+      @stats = Stats.new(stats_file)
+      @test_framework = TestFramework.new
 
       if forced = ENV['TEST_QUEUE_FORCE']
         forced = forced.split(/\s*,\s*/)
@@ -89,8 +93,6 @@ module TestQueue
       end
 
       @exit_when_done = true
-
-      @stats = Stats.new(stats_file)
     end
 
     # Run the tests.
@@ -233,7 +235,7 @@ module TestQueue
         pid = fork do
           @server.close if @server
 
-          iterator = Iterator.new(relay?? @relay : @socket, method(:around_filter), early_failure_limit: @early_failure_limit)
+          iterator = Iterator.new(@test_framework, relay?? @relay : @socket, method(:around_filter), early_failure_limit: @early_failure_limit)
           after_fork_internal(num, iterator)
           ret = run_worker(iterator) || 0
           cleanup_worker

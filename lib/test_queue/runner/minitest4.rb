@@ -83,4 +83,20 @@ module TestQueue
       end
     end
   end
+
+  class TestFramework
+    def load_suite(suite_name, path)
+      @suites ||= {}
+
+      suite = @suites[suite_name]
+      return suite if suite
+
+      ::MiniTest::Unit::TestCase.reset
+      require path
+      ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
+        @suites[suite.name] = suite
+      end
+      @suites[suite_name]
+    end
+  end
 end
