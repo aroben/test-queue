@@ -27,12 +27,14 @@ module TestQueue
     attr_accessor :concurrency, :exit_when_done
     attr_reader :stats
 
+    # FIXME: Remove queue parameter; it's unused.
     def initialize(queue, concurrency=nil, socket=nil, relay=nil)
       raise ArgumentError, 'array required' unless Array === queue
 
       @stats = Stats.new(stats_file)
       @test_framework = TestFramework.new
 
+      # FIXME: This does nothing now.
       if forced = ENV['TEST_QUEUE_FORCE']
         forced = forced.split(/\s*,\s*/)
         whitelist = Set.new(forced)
@@ -49,10 +51,9 @@ module TestQueue
       end
 
       @procline = $0
-      # FIXME: Populate this from stats too. Not sure what it means to have a
-      # queue passed in and also have the stats data; maybe we don't need one
-      # passed in anymore?
-      @queue = queue
+      @queue = @stats.all_suites
+        .sort_by { |suite| -suite.last_duration }
+        .map { |suite| [suite.name, suite.path] }
 
       @workers = {}
       @completed = []
@@ -268,7 +269,8 @@ module TestQueue
 
     def discover_suites
       @test_framework.discover_suites do |suite_name, filename|
-        # FIXME: Need to filter out suites that we already know about from @stats.
+        # Suites in @stats were added to the queue earlier.
+        next if @stats.suite?(suite_name)
         yield suite_name, filename
       end
     end

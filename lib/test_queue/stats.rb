@@ -23,6 +23,10 @@ module TestQueue
       @suites.values
     end
 
+    def suite?(name)
+      @suites.key?(name)
+    end
+
     def suite(name)
       @suites[name]
     end
