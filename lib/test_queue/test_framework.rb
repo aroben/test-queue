@@ -5,7 +5,9 @@ class TestFramework
   # Discover all suites to run by loading them from disk.
   #
   # An example implementation might `require` test files from the repository
-  # one-by-one and yield the suites found in each file.
+  # one-by-one and yield the suites found in each file. This is called in a
+  # separate process; changes to global state will not affect the master or its
+  # workers.
   #
   # Yields a series of 2-element Arrays containing:
   #
