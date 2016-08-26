@@ -1,11 +1,11 @@
 module TestQueue
   class Iterator
-    attr_reader :stats, :sock
+    attr_reader :suites, :sock
 
     def initialize(test_framework, sock, suites, filter=nil, early_failure_limit: nil)
       @test_framework = test_framework
       @done = false
-      @stats = []
+      @suites = []
       @procline = $0
       @sock = sock
       @filter = filter
@@ -52,7 +52,7 @@ module TestQueue
           else
             yield suite
           end
-          @stats << TestQueue::Stats::Suite.new(suite_name, file, Time.now - start, Time.now)
+          @suites << TestQueue::Stats::Suite.new(suite_name, file, Time.now - start, Time.now)
           @failures += suite.failure_count if suite.respond_to? :failure_count
         else
           break
@@ -61,8 +61,8 @@ module TestQueue
     rescue Errno::ENOENT, Errno::ECONNRESET, Errno::ECONNREFUSED
     ensure
       @done = caller.first
-      File.open("/tmp/test_queue_worker_#{$$}_stats", "wb") do |f|
-        f.write Marshal.dump(@stats)
+      File.open("/tmp/test_queue_worker_#{$$}_suites", "wb") do |f|
+        f.write Marshal.dump(@suites)
       end
     end
 

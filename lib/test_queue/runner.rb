@@ -6,16 +6,19 @@ require 'test_queue/test_framework'
 
 module TestQueue
   class Worker
-    attr_accessor :pid, :status, :output, :stats, :num, :host
+    attr_accessor :pid, :status, :output, :num, :host
     attr_accessor :start_time, :end_time
     attr_accessor :summary, :failure_output
+
+    # Array of TestQueue::Stats::Suite recording all the suites this worker ran.
+    attr_reader :suites
 
     def initialize(pid, num)
       @pid = pid
       @num = num
       @start_time = Time.now
       @output = ''
-      @stats = []
+      @suites = []
     end
 
     def lines
@@ -131,7 +134,7 @@ module TestQueue
         puts "    [%2d] %60s      %4d suites in %.4fs      (pid %d exit %d%s)" % [
           worker.num,
           worker.summary,
-          worker.stats.size,
+          worker.suites.size,
           worker.end_time - worker.start_time,
           worker.pid,
           worker.status.exitstatus,
@@ -336,8 +339,8 @@ module TestQueue
           FileUtils.rm(file)
         end
 
-        if File.exists?(file = "/tmp/test_queue_worker_#{pid}_stats")
-          worker.stats = Marshal.load(IO.binread(file))
+        if File.exists?(file = "/tmp/test_queue_worker_#{pid}_suites")
+          worker.suites = Marshal.load(IO.binread(file))
           FileUtils.rm(file)
         end
 
