@@ -56,7 +56,6 @@ module TestQueue
   class Runner
     class MiniTest < Runner
       def initialize
-        tests = ::MiniTest::Unit::TestCase.original_test_suites.sort_by{ |s| -(stats[s.to_s] || 0) }
         queue = ::MiniTest::Unit::TestCase.original_test_suites
           .sort_by { |s| -(stats[s.to_s] || 0) }
           .map { |s| [s, @test_framework.suite_file(s)] }
