@@ -276,8 +276,12 @@ module TestQueue
 
     def discover_suites
       @test_framework.discover_suites do |suite_name, filename|
-        # Suites in @stats were added to the queue earlier.
-        next if @stats.suite?(suite_name)
+        existing = @stats.suite(suite_name)
+        if existing && existing.path == filename
+          # This suite was already added to the queue when we initialized it
+          # from @stats.
+          next
+        end
         yield suite_name, filename
       end
     end
