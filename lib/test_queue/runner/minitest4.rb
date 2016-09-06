@@ -55,6 +55,10 @@ end
 module TestQueue
   class Runner
     class MiniTest < Runner
+      def initialize
+        super([])
+      end
+
       def run_worker(iterator)
         ::MiniTest::Unit::TestCase.test_suites = iterator
         ::MiniTest::Unit.new.run
