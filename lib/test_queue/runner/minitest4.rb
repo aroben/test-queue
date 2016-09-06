@@ -55,13 +55,6 @@ end
 module TestQueue
   class Runner
     class MiniTest < Runner
-      def initialize
-        queue = ::MiniTest::Unit::TestCase.original_test_suites
-          .sort_by { |s| -(stats[s.to_s] || 0) }
-          .map { |s| [s, @test_framework.suite_file(s)] }
-        super(queue)
-      end
-
       def run_worker(iterator)
         ::MiniTest::Unit::TestCase.test_suites = iterator
         ::MiniTest::Unit.new.run
@@ -71,17 +64,11 @@ module TestQueue
 
   class TestFramework
     def discover_suites
-      # Yield any suites that were already loaded (e.g., when autorunning via
-      # `ruby some_test.rb`).
-      ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
-        yield suite.name, suite_file(suite)
-      end
-
       ARGV.each do |arg|
         ::MiniTest::Unit::TestCase.reset
         require arg
         ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
-          yield suite.name, suite_file(suite)
+          yield suite.name, arg
         end
       end
     end
@@ -102,10 +89,6 @@ module TestQueue
         @suites[suite.name] = suite
       end
       @suites[suite_name]
-    end
-
-    def suite_file(suite)
-      suite.instance_method(suite.test_methods.first).source_location[0]
     end
   end
 end
