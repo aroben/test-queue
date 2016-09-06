@@ -57,6 +57,7 @@ module TestQueue
       @queue = @stats.all_suites
         .sort_by { |suite| -suite.last_duration }
         .map { |suite| [suite.name, suite.path] }
+      @discovered_suites = {}
 
       @workers = {}
       @completed = []
@@ -128,6 +129,10 @@ module TestQueue
       @failures = ''
       @completed.each do |worker|
         stats.record_suites(worker.suites)
+        worker.suites.each do |suite|
+          fail "Unknown discovered suite #{suite.inspect}" unless @discovered_suites.key?([suite.name, suite.path])
+          @discovered_suites[[suite.name, suite.path]] = true
+        end
         summarize_worker(worker)
         @failures << worker.failure_output if worker.failure_output
 
@@ -149,13 +154,23 @@ module TestQueue
         puts @failures
       end
 
+      not_run_suites = @discovered_suites.select { |key, value| !value }.map(&:first)
+      unless not_run_suites.empty?
+        puts
+        puts "The following suites were discovered but were not run:"
+        puts
+        not_run_suites.each do |suite_name, path|
+          puts "#{suite_name} - #{path}"
+        end
+      end
+
       puts
 
       @stats.save
 
       summarize
 
-      estatus = @completed.inject(0){ |s, worker| s + worker.status.exitstatus }
+      estatus = @completed.inject(not_run_suites.size){ |s, worker| s + worker.status.exitstatus }
       estatus = 255 if estatus > 255
       estatus
     end
@@ -271,6 +286,7 @@ module TestQueue
     def discover_suites_sequential
       discover_suites do |suite_name, filename|
         @queue.unshift [suite_name, filename]
+        @discovered_suites[[suite_name, filename]] = false
       end
     end
 
@@ -409,6 +425,7 @@ module TestQueue
           when /^NEW SUITE (.+)/
             suite_name, filename = Marshal.load($1)
             @queue.unshift [suite_name, filename]
+            @discovered_suites[[suite_name, filename]] = false
           when /^NO MORE SUITES$/
             @discovering_suites = false
           when /^KABOOM/
