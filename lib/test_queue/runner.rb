@@ -302,23 +302,24 @@ module TestQueue
 
     def discover_suites
       @test_framework.discover_suites do |suite_name, filename|
-        path = File.realpath(filename)
-        existing = @stats.suite(suite_name)
-        if existing && existing.path == path
-          # This suite was already added to the queue when we initialized it
-          # from @stats.
-          next
-        end
-        yield suite_name, path
+        yield suite_name, File.realpath(filename)
       end
     end
 
     def enqueue_discovered_suite(suite_name, path)
+      @discovered_suites << [suite_name, path]
+
+      existing = @stats.suite(suite_name)
+      if existing && existing.path == path
+        # This suite was already added to the queue when we initialized it
+        # from @stats.
+        return
+      end
+
       # We don't know how long new suites will take to run, so we put them at
       # the front of the queue. It's better to run a fast suite early than to
       # run a slow suite late.
       @queue.unshift [suite_name, path]
-      @discovered_suites << [suite_name, path]
     end
 
     def after_fork_internal(num, iterator)
