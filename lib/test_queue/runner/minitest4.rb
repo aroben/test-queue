@@ -1,4 +1,5 @@
 require 'test_queue/runner'
+require 'set'
 require 'stringio'
 
 class MiniTestQueueRunner < MiniTest::Unit
@@ -93,6 +94,15 @@ module TestQueue
         @suites[suite.name] = suite
       end
       @suites[suite_name]
+    end
+
+    def filter_suites(suites)
+      realpaths = ARGV
+        .map { |arg| File.realpath(arg) }
+        .to_set
+      suites.select do |suite|
+        realpaths.include?(suite.path)
+      end
     end
   end
 end

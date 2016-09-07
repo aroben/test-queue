@@ -27,4 +27,16 @@ class TestFramework
   def load_suite(suite_name, path)
     raise NotImplementedError
   end
+
+  # Filter the list of suites to be run.
+  #
+  # For instance, some test frameworks might support limiting the suites to be
+  # run based on command line parameters.
+  #
+  # suites - Array of TestQueue::Stats::Suite pulled from TestQueue::Stats.
+  #
+  # Returns an Array of TestQueue::Stats::Suite after applying filtering.
+  def filter_suites(suites)
+    suites
+  end
 end

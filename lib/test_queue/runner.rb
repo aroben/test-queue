@@ -55,7 +55,7 @@ module TestQueue
       end
 
       @procline = $0
-      @queue = @stats.all_suites
+      @queue = @test_framework.filter_suites(@stats.all_suites)
         .sort_by { |suite| -suite.last_duration }
         .map { |suite| [suite.name, suite.path] }
       @discovered_suites = Set.new
