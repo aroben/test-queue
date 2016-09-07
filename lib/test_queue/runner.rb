@@ -285,8 +285,7 @@ module TestQueue
 
     def discover_suites_sequential
       discover_suites do |suite_name, filename|
-        @queue.unshift [suite_name, filename]
-        @discovered_suites[[suite_name, filename]] = false
+        enqueue_discovered_suite(suite_name, filename)
       end
     end
 
@@ -300,6 +299,14 @@ module TestQueue
         end
         yield suite_name, filename
       end
+    end
+
+    def enqueue_discovered_suite(suite_name, filename)
+      # We don't know how long new suites will take to run, so we put them at
+      # the front of the queue. It's better to run a fast suite early than to
+      # run a slow suite late.
+      @queue.unshift [suite_name, filename]
+      @discovered_suites[[suite_name, filename]] = true
     end
 
     def after_fork_internal(num, iterator)
@@ -424,8 +431,7 @@ module TestQueue
             remote_workers -= 1
           when /^NEW SUITE (.+)/
             suite_name, filename = Marshal.load($1)
-            @queue.unshift [suite_name, filename]
-            @discovered_suites[[suite_name, filename]] = false
+            enqueue_discovered_suite(suite_name, filename)
           when /^NO MORE SUITES$/
             @discovering_suites = false
           when /^KABOOM/
