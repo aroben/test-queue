@@ -58,6 +58,9 @@ module TestQueue
       @queue = @test_framework.filter_suites(@stats.all_suites)
         .sort_by { |suite| -suite.last_duration }
         .map { |suite| [suite.name, suite.path] }
+
+      @original_queue = Set.new(@queue).freeze
+
       @discovered_suites = Set.new
       @run_suites = Set.new
 
@@ -313,10 +316,8 @@ module TestQueue
     def enqueue_discovered_suite(suite_name, path)
       @discovered_suites << [suite_name, path]
 
-      existing = @stats.suite(suite_name)
-      if existing && existing.path == path
-        # This suite was already added to the queue when we initialized it
-        # from @stats.
+      if @original_queue.include?([suite_name, path])
+        # This suite was already added to the queue some other way.
         return
       end
 
