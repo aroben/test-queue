@@ -269,9 +269,9 @@ module TestQueue
       return if relay?
       @discovering_suites = true
       fork do
-        discover_suites do |suite_name, filename|
+        discover_suites do |suite_name, path|
           @server.connect_address.connect do |sock|
-            sock.puts("NEW SUITE #{Marshal.dump([suite_name, filename])}")
+            sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
           end
         end
 
@@ -284,29 +284,30 @@ module TestQueue
     end
 
     def discover_suites_sequential
-      discover_suites do |suite_name, filename|
-        enqueue_discovered_suite(suite_name, filename)
+      discover_suites do |suite_name, path|
+        enqueue_discovered_suite(suite_name, path)
       end
     end
 
     def discover_suites
       @test_framework.discover_suites do |suite_name, filename|
+        path = File.realpath(filename)
         existing = @stats.suite(suite_name)
-        if existing && existing.path == filename
+        if existing && existing.path == path
           # This suite was already added to the queue when we initialized it
           # from @stats.
           next
         end
-        yield suite_name, filename
+        yield suite_name, path
       end
     end
 
-    def enqueue_discovered_suite(suite_name, filename)
+    def enqueue_discovered_suite(suite_name, path)
       # We don't know how long new suites will take to run, so we put them at
       # the front of the queue. It's better to run a fast suite early than to
       # run a slow suite late.
-      @queue.unshift [suite_name, filename]
-      @discovered_suites[[suite_name, filename]] = true
+      @queue.unshift [suite_name, path]
+      @discovered_suites[[suite_name, path]] = true
     end
 
     def after_fork_internal(num, iterator)
@@ -430,8 +431,8 @@ module TestQueue
             worker_completed(worker)
             remote_workers -= 1
           when /^NEW SUITE (.+)/
-            suite_name, filename = Marshal.load($1)
-            enqueue_discovered_suite(suite_name, filename)
+            suite_name, path = Marshal.load($1)
+            enqueue_discovered_suite(suite_name, path)
           when /^NO MORE SUITES$/
             @discovering_suites = false
           when /^KABOOM/

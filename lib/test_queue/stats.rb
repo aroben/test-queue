@@ -47,7 +47,7 @@ module TestQueue
 
     private
 
-    CURRENT_VERSION = 1
+    CURRENT_VERSION = 2
 
     def load
       data = begin
