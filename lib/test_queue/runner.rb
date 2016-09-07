@@ -38,14 +38,6 @@ module TestQueue
       @stats = Stats.new(stats_file)
       @test_framework = TestFramework.new
 
-      # FIXME: This does nothing now.
-      if forced = ENV['TEST_QUEUE_FORCE']
-        forced = forced.split(/\s*,\s*/)
-        whitelist = Set.new(forced)
-        queue = queue.select{ |s, f| whitelist.include?(s) }
-        queue.sort_by!{ |s, f| forced.index(s) }
-      end
-
       if ENV['TEST_QUEUE_EARLY_FAILURE_LIMIT']
         begin
           @early_failure_limit = Integer(ENV['TEST_QUEUE_EARLY_FAILURE_LIMIT'])
@@ -55,10 +47,21 @@ module TestQueue
       end
 
       @procline = $0
+
+      @whitelist = Set.new
+
       @queue = @test_framework.filter_suites(@stats.all_suites)
         .sort_by { |suite| -suite.last_duration }
         .map { |suite| [suite.name, suite.path] }
 
+      if forced = ENV['TEST_QUEUE_FORCE']
+        forced = forced.split(/\s*,\s*/)
+        @whitelist.merge(forced)
+        @queue.select! { |suite_name, path| @whitelist.include?(suite_name) }
+        @queue.sort_by! { |suite_name, path| forced.index(suite_name) }
+      end
+
+      @whitelist.freeze
       @original_queue = Set.new(@queue).freeze
 
       @discovered_suites = Set.new
@@ -314,6 +317,10 @@ module TestQueue
     end
 
     def enqueue_discovered_suite(suite_name, path)
+      if @whitelist.any? && !@whitelist.include?(suite_name)
+        return
+      end
+
       @discovered_suites << [suite_name, path]
 
       if @original_queue.include?([suite_name, path])
