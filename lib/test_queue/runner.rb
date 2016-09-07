@@ -1,3 +1,4 @@
+require 'set'
 require 'socket'
 require 'fileutils'
 require 'securerandom'
@@ -57,7 +58,8 @@ module TestQueue
       @queue = @stats.all_suites
         .sort_by { |suite| -suite.last_duration }
         .map { |suite| [suite.name, suite.path] }
-      @discovered_suites = {}
+      @discovered_suites = Set.new
+      @run_suites = Set.new
 
       @workers = {}
       @completed = []
@@ -130,8 +132,7 @@ module TestQueue
       @completed.each do |worker|
         stats.record_suites(worker.suites)
         worker.suites.each do |suite|
-          fail "Unknown discovered suite #{suite.inspect}" unless @discovered_suites.key?([suite.name, suite.path])
-          @discovered_suites[[suite.name, suite.path]] = true
+          @run_suites << [suite.name, suite.path]
         end
         summarize_worker(worker)
         @failures << worker.failure_output if worker.failure_output
@@ -154,12 +155,21 @@ module TestQueue
         puts @failures
       end
 
-      not_run_suites = @discovered_suites.select { |key, value| !value }.map(&:first)
-      unless not_run_suites.empty?
+      skipped_suites = @discovered_suites - @run_suites
+      unexpected_suites = @run_suites - @discovered_suites
+      unless skipped_suites.empty?
         puts
         puts "The following suites were discovered but were not run:"
         puts
-        not_run_suites.each do |suite_name, path|
+        skipped_suites.sort.each do |suite_name, path|
+          puts "#{suite_name} - #{path}"
+        end
+      end
+      unless unexpected_suites.empty?
+        puts
+        puts "The following suites were not discovered but were run anyway:"
+        puts
+        unexpected_suites.sort.each do |suite_name, path|
           puts "#{suite_name} - #{path}"
         end
       end
@@ -170,7 +180,8 @@ module TestQueue
 
       summarize
 
-      estatus = @completed.inject(not_run_suites.size){ |s, worker| s + worker.status.exitstatus }
+      estatus = @completed.inject(0){ |s, worker| s + worker.status.exitstatus }
+      estatus += 1 unless skipped_suites.empty? && unexpected_suites.empty?
       estatus = 255 if estatus > 255
       estatus
     end
@@ -307,7 +318,7 @@ module TestQueue
       # the front of the queue. It's better to run a fast suite early than to
       # run a slow suite late.
       @queue.unshift [suite_name, path]
-      @discovered_suites[[suite_name, path]] = true
+      @discovered_suites << [suite_name, path]
     end
 
     def after_fork_internal(num, iterator)
