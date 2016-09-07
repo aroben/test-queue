@@ -36,12 +36,14 @@ module TestQueue
   class Runner
     class TestUnit < Runner
       def initialize
-        @suite = Test::Unit::Collector::Descendant.new.collect
-        tests = @suite.tests.sort_by{ |s| -(stats[s.to_s] || 0) }
-        super(tests)
+        if Test::Unit::Collector::Descendant.new.collect.tests.any?
+          fail "Do not `require` test files. Pass them via ARGV instead and they will be required as needed."
+        end
+        super([])
       end
 
       def run_worker(iterator)
+        @suite = Test::Unit::TestSuite.new("specified by test-queue master")
         @suite.iterator = iterator
         res = Test::Unit::UI::Console::TestRunner.new(@suite).start
         res.run_count - res.pass_count
@@ -50,6 +52,45 @@ module TestQueue
       def summarize_worker(worker)
         worker.summary = worker.output.split("\n").grep(/^\d+ tests?/).first
         worker.failure_output = worker.output.scan(/^Failure:\n(.*)\n=======================*/m).join("\n")
+      end
+    end
+  end
+
+  class TestFramework
+    def discover_suites
+      ARGV.each do |arg|
+        Test::Unit::TestCase::DESCENDANTS.clear
+        require arg
+        Test::Unit::Collector::Descendant.new.collect.tests.each do |suite|
+          yield suite.name, arg
+        end
+      end
+    end
+
+    def load_suite(suite_name, path)
+      @suites ||= {}
+
+      suite = @suites[suite_name]
+      return suite if suite
+
+      Test::Unit::TestCase::DESCENDANTS.clear
+      begin
+        require path
+      rescue LoadError
+        return nil
+      end
+      Test::Unit::Collector::Descendant.new.collect.tests.each do |suite|
+        @suites[suite.name] = suite
+      end
+      @suites[suite_name]
+    end
+
+    def filter_suites(suites)
+      realpaths = ARGV
+        .map { |arg| File.realpath(arg) }
+        .to_set
+      suites.select do |suite|
+        realpaths.include?(suite.path)
       end
     end
   end

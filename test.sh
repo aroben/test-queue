@@ -3,9 +3,9 @@ set -x
 
 export TEST_QUEUE_WORKERS=2 TEST_QUEUE_VERBOSE=1
 
-#export BUNDLE_GEMFILE=Gemfile-testunit
-#bundle install
-#bundle exec testunit-queue ./test/*_testunit.rb
+export BUNDLE_GEMFILE=Gemfile-testunit
+bundle install
+bundle exec testunit-queue ./test/*_testunit.rb
 
 export BUNDLE_GEMFILE=Gemfile-minitest4
 bundle install
