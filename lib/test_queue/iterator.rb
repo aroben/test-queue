@@ -38,7 +38,10 @@ module TestQueue
           client.close
           item = Marshal.load(data)
           break if item.nil? || item.empty?
-          next if item == "WAIT"
+          if item == "WAIT"
+            sleep 0.1
+            next
+          end
           suite_name, file = item
           suite = @test_framework.load_suite(suite_name, file)
 
