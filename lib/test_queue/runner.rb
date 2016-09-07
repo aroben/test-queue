@@ -279,7 +279,11 @@ module TestQueue
     def discover_suites_parallel
       return if relay?
       @discovering_suites = true
-      fork do
+      @discovering_suites_pid = fork do
+        # Create our own process group so the master process doesn't confuse us
+        # for a worker.
+        Process.setpgid(0, 0)
+
         discover_suites do |suite_name, path|
           @server.connect_address.connect do |sock|
             sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
@@ -374,7 +378,9 @@ module TestQueue
     end
 
     def reap_worker(blocking=true)
-      if pid = Process.waitpid(-1, blocking ? 0 : Process::WNOHANG) and worker = @workers.delete(pid)
+      # We pass 0 as the first argument here to ensure we only wait for worker
+      # processes, not for the suite discovery process.
+      if pid = Process.waitpid(0, blocking ? 0 : Process::WNOHANG) and worker = @workers.delete(pid)
         worker.status = $?
         worker.end_time = Time.now
 
@@ -405,6 +411,14 @@ module TestQueue
 
       until !@discovering_suites && @queue.empty? && remote_workers == 0
         queue_status(@start_time, @queue.size, @workers.size, remote_workers)
+
+        # Make sure our discovery process is still doing OK.
+        if @discovering_suites && Process.waitpid(@discovering_suites_pid, Process::WNOHANG) != nil
+          unless $?.success?
+            STDERR.puts "Discovering suites failed. Aborting."
+            break
+          end
+        end
 
         if IO.select([@server], nil, nil, 0.1).nil?
           reap_worker(false) if @workers.any? # check for worker deaths
