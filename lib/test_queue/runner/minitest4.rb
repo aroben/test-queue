@@ -57,6 +57,9 @@ module TestQueue
   class Runner
     class MiniTest < Runner
       def initialize
+        if ::MiniTest::Unit::TestCase.original_test_suites.any?
+          fail "Do not `require` test files. Pass them via ARGV instead and they will be required as needed."
+        end
         super([])
       end
 
