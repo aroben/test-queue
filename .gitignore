@@ -1,3 +1,4 @@
+/.bundle/
 /.test_queue_stats
-/vendor
-/tmp
+/vendor/
+/tmp/
