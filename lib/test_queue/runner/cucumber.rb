@@ -23,34 +23,25 @@ end
 module TestQueue
   class Runner
     class Cucumber < Runner
-      class FakeKernel
-        def exit(n)
-        end
-      end
-
       def initialize
-        @cli             = ::Cucumber::Cli::Main.new(ARGV.dup, $stdin, $stdout, $stderr, FakeKernel.new)
-        @runtime         = ::Cucumber::Runtime.new(@cli.configuration)
-        @features_loader = @runtime.send(:features)
-
-        features = @features_loader.is_a?(Array) ? @features_loader : @features_loader.features
-        features = features.sort_by { |s| -(stats[s.to_s] || 0) }
-        super(features)
+        super([])
       end
 
       def run_worker(iterator)
-        if @features_loader.is_a?(Array)
-          @runtime.features = iterator
+        runtime = @test_framework.runtime
+
+        if defined?(::Cucumber::Runtime::FeaturesLoader)
+          runtime.send(:features).features = iterator
         else
-          @features_loader.features = iterator
+          runtime.features = iterator
         end
 
-        @cli.execute!(@runtime)
+        @test_framework.cli.execute!(runtime)
 
-        if @runtime.respond_to?(:summary_report, true)
-          @runtime.send(:summary_report).test_cases.total_failed
+        if runtime.respond_to?(:summary_report, true)
+          runtime.send(:summary_report).test_cases.total_failed
         else
-          @runtime.results.scenarios(:failed).size
+          runtime.results.scenarios(:failed).size
         end
       end
 
@@ -59,6 +50,67 @@ module TestQueue
         worker.summary        = output.split("\n").grep(/^\d+ (scenarios?|steps?)/).first
         worker.failure_output = output.scan(/^Failing Scenarios:\n(.*)\n\d+ scenarios?/m).join("\n")
       end
+    end
+  end
+
+  class TestFramework
+    class FakeKernel
+      def exit(n)
+      end
+    end
+
+    def cli
+      @cli ||= ::Cucumber::Cli::Main.new(ARGV.dup, $stdin, $stdout, $stderr, FakeKernel.new)
+    end
+
+    def runtime
+      @runtime ||= ::Cucumber::Runtime.new(cli.configuration)
+    end
+
+    def discover_suites
+      # FIXME: This loads all features at once before yielding any of them. It
+      # would be nice to yield them as they're loaded to reduce startup
+      # latency.
+      runtime.send(:features).each do |document|
+        if document.respond_to?(:uri)
+          yield File.basename(document.uri), document.uri
+        else
+          yield document.title, document.file
+        end
+      end
+    end
+
+    def load_suite(suite_name, path)
+      @suites ||= {}
+
+      suite = @suites[suite_name]
+      return suite if suite
+
+      if defined?(::Cucumber::Runtime::FeaturesLoader)
+        loader =
+          ::Cucumber::Runtime::FeaturesLoader.new([path],
+                                                  cli.configuration.filters,
+                                                  cli.configuration.tag_expression)
+        loader.features.each do |feature|
+          @suites[feature.title] = feature
+        end
+      else
+        source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
+        doc = Cucumber::Core::Gherkin::Document.new(path, source)
+        @suites[File.basename(doc.uri)] = doc
+      end
+
+      @suites[suite_name]
+    end
+
+    def filter_suites(suites)
+      files = if runtime.respond_to?(:feature_files, true)
+                runtime.send(:feature_files)
+              else
+                cli.configuration.feature_files
+              end
+      files = Set.new(files)
+      suites.select { |suite| files.include?(suite.path) }
     end
   end
 end
