@@ -1,1 +1,3 @@
-.test_queue_stats
+/.test_queue_stats
+/vendor
+/tmp

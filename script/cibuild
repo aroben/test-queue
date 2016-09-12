@@ -2,6 +2,9 @@
 
 set -ex
 
+git clean -df
+rm -f .test_queue_stats
+
 export TEST_QUEUE_WORKERS=2 TEST_QUEUE_VERBOSE=1
 
 if [ -f "Gemfile-$SUITE" ]; then
