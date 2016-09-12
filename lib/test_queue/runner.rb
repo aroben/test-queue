@@ -312,7 +312,7 @@ module TestQueue
 
     def discover_suites
       @test_framework.discover_suites do |suite_name, filename|
-        yield suite_name, File.realpath(filename)
+        yield suite_name, filename
       end
     end
 

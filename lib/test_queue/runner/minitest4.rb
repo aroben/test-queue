@@ -100,12 +100,8 @@ module TestQueue
     end
 
     def filter_suites(suites)
-      realpaths = ARGV
-        .map { |arg| File.realpath(arg) }
-        .to_set
-      suites.select do |suite|
-        realpaths.include?(suite.path)
-      end
+      paths = ARGV.to_set
+      suites.select { |suite| paths.include?(suite.path) }
     end
   end
 end
