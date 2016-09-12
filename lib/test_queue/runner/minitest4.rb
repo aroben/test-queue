@@ -74,7 +74,7 @@ module TestQueue
     def discover_suites
       ARGV.each do |arg|
         ::MiniTest::Unit::TestCase.reset
-        require arg
+        require File.absolute_path(arg)
         ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
           yield suite.name, arg
         end
@@ -89,7 +89,7 @@ module TestQueue
 
       ::MiniTest::Unit::TestCase.reset
       begin
-        require path
+        require File.absolute_path(path)
       rescue LoadError
         return nil
       end

@@ -60,7 +60,7 @@ module TestQueue
     def discover_suites
       ARGV.each do |arg|
         Test::Unit::TestCase::DESCENDANTS.clear
-        require arg
+        require File.absolute_path(arg)
         Test::Unit::Collector::Descendant.new.collect.tests.each do |suite|
           yield suite.name, arg
         end
@@ -75,7 +75,7 @@ module TestQueue
 
       Test::Unit::TestCase::DESCENDANTS.clear
       begin
-        require path
+        require File.absolute_path(path)
       rescue LoadError
         return nil
       end
