@@ -300,7 +300,8 @@ module TestQueue
           sock.puts("NO MORE SUITES")
         end
 
-        Kernel.exit!
+        # FIXME: Need a test that things fail when this returns 1.
+        Kernel.exit! 0
       end
     end
 
