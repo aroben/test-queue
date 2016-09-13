@@ -76,6 +76,9 @@ module TestQueue
         else
           2
         end
+      unless @concurrency > 0
+        raise ArgumentError, "Worker count (#{@concurrency}) must be greater than 0"
+      end
 
       @slave_connection_timeout =
         (ENV['TEST_QUEUE_RELAY_TIMEOUT'] && ENV['TEST_QUEUE_RELAY_TIMEOUT'].to_i) ||
@@ -110,11 +113,9 @@ module TestQueue
       $stdout.sync = $stderr.sync = true
       @start_time = Time.now
 
-      @concurrency > 0 ?
-        execute_parallel :
-        execute_sequential
-
+      execute_parallel
       exitstatus = summarize_internal
+
       if exit_when_done
         exit! exitstatus
       else
@@ -196,11 +197,6 @@ module TestQueue
     def stats_file
       ENV['TEST_QUEUE_STATS'] ||
       '.test_queue_stats'
-    end
-
-    def execute_sequential
-      discover_suites_sequential
-      run_worker(@queue)
     end
 
     def execute_parallel
@@ -295,12 +291,6 @@ module TestQueue
 
         # FIXME: Need a test that things fail when this returns 1.
         Kernel.exit! 0
-      end
-    end
-
-    def discover_suites_sequential
-      discover_suites do |suite_name, path|
-        enqueue_discovered_suite(suite_name, path)
       end
     end
 
