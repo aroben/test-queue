@@ -284,7 +284,6 @@ module TestQueue
 
     def discover_suites_parallel
       return if relay?
-      @discovering_suites = true
       @discovering_suites_pid = fork do
         # Create our own process group so the master process doesn't confuse us
         # for a worker.
@@ -294,10 +293,6 @@ module TestQueue
           @server.connect_address.connect do |sock|
             sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
           end
-        end
-
-        @server.connect_address.connect do |sock|
-          sock.puts("NO MORE SUITES")
         end
 
         # FIXME: Need a test that things fail when this returns 1.
@@ -418,11 +413,12 @@ module TestQueue
       return if relay?
       remote_workers = 0
 
-      until !@discovering_suites && @queue.empty? && remote_workers == 0
+      until @discovering_suites_pid.nil? && @queue.empty? && remote_workers == 0
         queue_status(@start_time, @queue.size, @workers.size, remote_workers)
 
         # Make sure our discovery process is still doing OK.
-        if @discovering_suites && Process.waitpid(@discovering_suites_pid, Process::WNOHANG) != nil
+        if @discovering_suites_pid && Process.waitpid(@discovering_suites_pid, Process::WNOHANG) != nil
+          @discovering_suites_pid = nil
           unless $?.success?
             STDERR.puts "Discovering suites failed. Aborting."
             break
@@ -441,7 +437,7 @@ module TestQueue
             if obj = @queue.shift
               data = Marshal.dump(obj)
               sock.write(data)
-            elsif @discovering_suites
+            elsif @discovering_suites_pid
               sock.write(Marshal.dump("WAIT"))
             end
           when /^SLAVE (\d+) ([\w\.-]+) (\w+)(?: (.+))?/
@@ -468,8 +464,6 @@ module TestQueue
           when /^NEW SUITE (.+)/
             suite_name, path = Marshal.load($1)
             enqueue_discovered_suite(suite_name, path)
-          when /^NO MORE SUITES$/
-            @discovering_suites = false
           when /^KABOOM/
             # worker reporting an abnormal number of test failures;
             # stop everything immediately and report the results.
