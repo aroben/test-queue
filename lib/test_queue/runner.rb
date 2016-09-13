@@ -31,10 +31,7 @@ module TestQueue
     attr_accessor :concurrency, :exit_when_done
     attr_reader :stats
 
-    # FIXME: Remove queue parameter; it's unused.
-    def initialize(queue, concurrency=nil, socket=nil, relay=nil)
-      raise ArgumentError, 'array required' unless Array === queue
-
+    def initialize
       @stats = Stats.new(stats_file)
       @test_framework = TestFramework.new
 
@@ -71,7 +68,6 @@ module TestQueue
       @completed = []
 
       @concurrency =
-        concurrency ||
         (ENV['TEST_QUEUE_WORKERS'] && ENV['TEST_QUEUE_WORKERS'].to_i) ||
         if File.exists?('/proc/cpuinfo')
           File.read('/proc/cpuinfo').split("\n").grep(/processor/).size
@@ -88,13 +84,10 @@ module TestQueue
       @run_token = ENV['TEST_QUEUE_RELAY_TOKEN'] || SecureRandom.hex(8)
 
       @socket =
-        socket ||
         ENV['TEST_QUEUE_SOCKET'] ||
         "/tmp/test_queue_#{$$}_#{object_id}.sock"
 
-      @relay =
-        relay ||
-        ENV['TEST_QUEUE_RELAY']
+      @relay = ENV['TEST_QUEUE_RELAY']
 
       @slave_message = ENV["TEST_QUEUE_SLAVE_MESSAGE"] if ENV.has_key?("TEST_QUEUE_SLAVE_MESSAGE")
 

@@ -23,10 +23,6 @@ end
 module TestQueue
   class Runner
     class Cucumber < Runner
-      def initialize
-        super([])
-      end
-
       def run_worker(iterator)
         runtime = @test_framework.runtime
 

@@ -39,7 +39,7 @@ module TestQueue
         if Test::Unit::Collector::Descendant.new.collect.tests.any?
           fail "Do not `require` test files. Pass them via ARGV instead and they will be required as needed."
         end
-        super([])
+        super
       end
 
       def run_worker(iterator)

@@ -19,11 +19,6 @@ end
 module TestQueue
   class Runner
     class RSpec < Runner
-      def initialize
-        super([])
-      end
-
-
       def run_worker(iterator)
         rspec = ::RSpec::Core::QueueRunner.new
         rspec.run_each(iterator).to_i
