@@ -204,7 +204,7 @@ module TestQueue
       prepare(@concurrency)
       @prepared_time = Time.now
       start_relay if relay?
-      discover_suites_parallel
+      discover_suites
       spawn_workers
       distribute_queue
     ensure
@@ -276,14 +276,14 @@ module TestQueue
       end
     end
 
-    def discover_suites_parallel
+    def discover_suites
       return if relay?
       @discovering_suites_pid = fork do
         # Create our own process group so the master process doesn't confuse us
         # for a worker.
         Process.setpgid(0, 0)
 
-        discover_suites do |suite_name, path|
+        @test_framework.discover_suites do |suite_name, path|
           @server.connect_address.connect do |sock|
             sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
           end
@@ -291,12 +291,6 @@ module TestQueue
 
         # FIXME: Need a test that things fail when this returns 1.
         Kernel.exit! 0
-      end
-    end
-
-    def discover_suites
-      @test_framework.discover_suites do |suite_name, filename|
-        yield suite_name, filename
       end
     end
 
