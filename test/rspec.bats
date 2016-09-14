@@ -21,9 +21,6 @@ setup() {
 @test "TEST_QUEUE_SPLIT_GROUPS splits splittable groups" {
   export TEST_QUEUE_SPLIT_GROUPS=true
   run bundle exec rspec-queue ./test/samples/sample_split_spec.rb
-  echo "rspec-queue status $status"
-  echo $output
-  false
   assert_status 0
 
   # One worker should get tied up with the slow example in the splittable
