@@ -41,7 +41,8 @@ module TestQueue
         RSpec.world.reset
         load file
         split_groups(RSpec.world.example_groups).each do |example_or_group|
-          yield example_or_group.to_s, file
+          name = example_or_group.respond_to?(:id) ? example_or_group.id : example_or_group.to_s
+          yield name, file
         end
       end
     end
@@ -59,7 +60,8 @@ module TestQueue
         return nil
       end
       split_groups(RSpec.world.example_groups).each do |example_or_group|
-        @suites[example_or_group.to_s] = example_or_group
+        name = example_or_group.respond_to?(:id) ? example_or_group.id : example_or_group.to_s
+        @suites[name] = example_or_group
       end
       @suites[suite_name]
     end

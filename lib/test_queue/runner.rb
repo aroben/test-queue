@@ -113,7 +113,7 @@ module TestQueue
       $stdout.sync = $stderr.sync = true
       @start_time = Time.now
 
-      execute_parallel
+      execute_internal
       exitstatus = summarize_internal
 
       if exit_when_done
@@ -199,7 +199,7 @@ module TestQueue
       '.test_queue_stats'
     end
 
-    def execute_parallel
+    def execute_internal
       start_master
       prepare(@concurrency)
       @prepared_time = Time.now
@@ -369,25 +369,29 @@ module TestQueue
       worker.failure_output = ''
     end
 
-    def reap_worker(blocking=true)
-      # We pass 0 as the first argument here to ensure we only wait for worker
-      # processes, not for the suite discovery process.
-      if pid = Process.waitpid(0, blocking ? 0 : Process::WNOHANG) and worker = @workers.delete(pid)
+    def reap_workers(blocking=true)
+      @workers.delete_if do |_, worker|
+        if Process.waitpid(worker.pid, blocking ? 0 : Process::WNOHANG).nil?
+          next false
+        end
+
         worker.status = $?
         worker.end_time = Time.now
 
-        if File.exists?(file = "/tmp/test_queue_worker_#{pid}_output")
+        if File.exists?(file = "/tmp/test_queue_worker_#{worker.pid}_output")
           worker.output = IO.binread(file)
           FileUtils.rm(file)
         end
 
-        if File.exists?(file = "/tmp/test_queue_worker_#{pid}_suites")
+        if File.exists?(file = "/tmp/test_queue_worker_#{worker.pid}_suites")
           worker.suites = Marshal.load(IO.binread(file))
           FileUtils.rm(file)
         end
 
         relay_to_master(worker) if relay?
         worker_completed(worker)
+
+        true
       end
     end
 
@@ -414,8 +418,7 @@ module TestQueue
         end
 
         if IO.select([@server], nil, nil, 0.1).nil?
-          reap_worker(false) if @workers.any? # check for worker deaths
-          next
+          reap_workers(false) # check for worker deaths
         else
           sock = @server.accept
           cmd = sock.gets.strip
@@ -462,10 +465,7 @@ module TestQueue
       end
     ensure
       stop_master
-
-      until @workers.empty?
-        reap_worker
-      end
+      reap_workers
     end
 
     def relay?
@@ -504,9 +504,7 @@ module TestQueue
         Process.kill 'KILL', pid
       end
 
-      until @workers.empty?
-        reap_worker
-      end
+      reap_workers
     end
 
     # Stop the test run immediately.
