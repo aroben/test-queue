@@ -1,4 +1,5 @@
 /.bundle/
+/.ruby_version
 /.test_queue_stats
 /vendor/
 /tmp/
