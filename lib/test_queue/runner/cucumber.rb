@@ -63,7 +63,7 @@ module TestQueue
       @runtime ||= ::Cucumber::Runtime.new(cli.configuration)
     end
 
-    def all_test_files
+    def all_suite_paths
       if runtime.respond_to?(:feature_files, true)
         runtime.send(:feature_files)
       else
@@ -71,7 +71,7 @@ module TestQueue
       end
     end
 
-    def suites_from_file(path, raise_on_error)
+    def suites_from_path(path, raise_on_error)
       # FIXME: Support raise_on_error
       if defined?(::Cucumber::Core::Gherkin::Document)
         source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
