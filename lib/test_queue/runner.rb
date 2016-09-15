@@ -133,6 +133,9 @@ module TestQueue
       @failures = ''
       @completed.each do |worker|
         @stats.record_suites(worker.suites)
+        worker.suites.each do |suite|
+          @run_suites << [suite.name, suite.path]
+        end
 
         summarize_worker(worker)
 
