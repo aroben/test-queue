@@ -12,7 +12,7 @@ module TestQueue
     attr_accessor :summary, :failure_output
 
     # Array of TestQueue::Stats::Suite recording all the suites this worker ran.
-    attr_accessor :suites
+    attr_reader :suites
 
     def initialize(pid, num)
       @pid = pid
@@ -50,7 +50,7 @@ module TestQueue
       all_files = @test_framework.all_suite_paths.to_set
       @queue = @stats.all_suites
         .select { |suite| all_files.include?(suite.path) }
-        .sort_by { |suite| -suite.last_duration }
+        .sort_by { |suite| -suite.duration }
         .map { |suite| [suite.name, suite.path] }
 
       if forced = ENV['TEST_QUEUE_FORCE']
@@ -132,11 +132,10 @@ module TestQueue
 
       @failures = ''
       @completed.each do |worker|
-        stats.record_suites(worker.suites)
-        worker.suites.each do |suite|
-          @run_suites << [suite.name, suite.path]
-        end
+        @stats.record_suites(worker.suites)
+
         summarize_worker(worker)
+
         @failures << worker.failure_output if worker.failure_output
 
         puts "    [%2d] %60s      %4d suites in %.4fs      (pid %d exit %d%s)" % [
@@ -378,7 +377,7 @@ module TestQueue
         end
 
         if File.exists?(file = "/tmp/test_queue_worker_#{worker.pid}_suites")
-          worker.suites = Marshal.load(IO.binread(file))
+          worker.suites.replace(Marshal.load(IO.binread(file)))
           FileUtils.rm(file)
         end
 

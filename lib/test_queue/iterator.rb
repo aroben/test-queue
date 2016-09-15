@@ -65,7 +65,7 @@ module TestQueue
     ensure
       @done = caller.first
       File.open("/tmp/test_queue_worker_#{$$}_suites", "wb") do |f|
-        f.write Marshal.dump(@suites)
+        Marshal.dump(@suites, f)
       end
     end
 
