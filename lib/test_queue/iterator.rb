@@ -2,7 +2,7 @@ module TestQueue
   class Iterator
     attr_reader :suites, :sock
 
-    def initialize(test_framework, sock, suites, filter=nil, early_failure_limit: nil)
+    def initialize(test_framework, sock, filter=nil, early_failure_limit: nil)
       @test_framework = test_framework
       @done = false
       @suites = []
