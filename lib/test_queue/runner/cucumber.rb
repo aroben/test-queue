@@ -76,7 +76,7 @@ module TestQueue
       if defined?(::Cucumber::Core::Gherkin::Document)
         source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
         doc = ::Cucumber::Core::Gherkin::Document.new(path, source)
-        [File.basename(doc.uri), doc]
+        [[File.basename(doc.uri), doc]]
       else
         loader =
           ::Cucumber::Runtime::FeaturesLoader.new([path],
