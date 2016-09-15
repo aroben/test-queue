@@ -57,37 +57,21 @@ module TestQueue
   end
 
   class TestFramework
-    def discover_suites
-      ARGV.each do |arg|
-        Test::Unit::TestCase::DESCENDANTS.clear
-        require File.absolute_path(arg)
-        Test::Unit::Collector::Descendant.new.collect.tests.each do |suite|
-          yield suite.name, arg
-        end
-      end
+    def all_suite_paths
+      ARGV
     end
 
-    def load_suite(suite_name, path)
-      @suites ||= {}
-
-      suite = @suites[suite_name]
-      return suite if suite
-
+    def suites_from_path(path, raise_on_error)
       Test::Unit::TestCase::DESCENDANTS.clear
       begin
         require File.absolute_path(path)
       rescue LoadError
-        return nil
+        raise if raise_on_error
+        return []
       end
-      Test::Unit::Collector::Descendant.new.collect.tests.each do |suite|
-        @suites[suite.name] = suite
-      end
-      @suites[suite_name]
-    end
-
-    def filter_suites(suites)
-      paths = ARGV.to_set
-      suites.select { |suite| paths.include?(suite.path) }
+      Test::Unit::Collector::Descendant.new.collect.tests.map { |suite|
+        [suite.name, suite]
+      }
     end
   end
 end

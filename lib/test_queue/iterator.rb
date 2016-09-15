@@ -42,8 +42,8 @@ module TestQueue
             sleep 0.1
             next
           end
-          suite_name, file = item
-          suite = @test_framework.load_suite(suite_name, file)
+          suite_name, path = item
+          suite = load_suite(suite_name, path)
 
           # Maybe we were told to load a suite that doesn't exist anymore.
           next unless suite
@@ -55,7 +55,7 @@ module TestQueue
           else
             yield suite
           end
-          @suites << TestQueue::Stats::Suite.new(suite_name, file, Time.now - start, Time.now)
+          @suites << TestQueue::Stats::Suite.new(suite_name, path, Time.now - start, Time.now)
           @failures += suite.failure_count if suite.respond_to? :failure_count
         else
           break
@@ -86,6 +86,17 @@ module TestQueue
 
     def empty?
       false
+    end
+
+    def load_suite(suite_name, path)
+      @loaded_suites ||= {}
+      suite = @loaded_suites[suite_name]
+      return suite if suite
+
+      @test_framework.suites_from_path(path, false).each do |name, suite|
+        @loaded_suites[name] = suite
+      end
+      @loaded_suites[suite_name]
     end
   end
 end

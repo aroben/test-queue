@@ -71,37 +71,21 @@ module TestQueue
   end
 
   class TestFramework
-    def discover_suites
-      ARGV.each do |arg|
-        ::MiniTest::Unit::TestCase.reset
-        require File.absolute_path(arg)
-        ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
-          yield suite.name, arg
-        end
-      end
+    def all_suite_paths
+      ARGV
     end
 
-    def load_suite(suite_name, path)
-      @suites ||= {}
-
-      suite = @suites[suite_name]
-      return suite if suite
-
+    def suites_from_path(path, raise_on_error)
       ::MiniTest::Unit::TestCase.reset
       begin
         require File.absolute_path(path)
       rescue LoadError
-        return nil
+        raise if raise_on_error
+        return []
       end
-      ::MiniTest::Unit::TestCase.original_test_suites.each do |suite|
-        @suites[suite.name] = suite
-      end
-      @suites[suite_name]
-    end
-
-    def filter_suites(suites)
-      paths = ARGV.to_set
-      suites.select { |suite| paths.include?(suite.path) }
+      ::MiniTest::Unit::TestCase.original_test_suites.map { |suite|
+        [suite.name, suite]
+      }
     end
   end
 end

@@ -47,7 +47,9 @@ module TestQueue
 
       @whitelist = Set.new
 
-      @queue = @test_framework.filter_suites(@stats.all_suites)
+      all_files = @test_framework.all_suite_paths.to_set
+      @queue = @stats.all_suites
+        .select { |suite| all_files.include?(suite.path) }
         .sort_by { |suite| -suite.last_duration }
         .map { |suite| [suite.name, suite.path] }
 
@@ -279,9 +281,11 @@ module TestQueue
     def discover_suites
       return if relay?
       @discovering_suites_pid = fork do
-        @test_framework.discover_suites do |suite_name, path|
-          @server.connect_address.connect do |sock|
-            sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
+        @test_framework.all_suite_paths.each do |path|
+          @test_framework.suites_from_path(path, true).each do |suite_name, suite|
+            @server.connect_address.connect do |sock|
+              sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
+            end
           end
         end
 

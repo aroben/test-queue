@@ -70,42 +70,21 @@ module TestQueue
   end
 
   class TestFramework
-    def discover_suites
-      ARGV.each do |arg|
-        ::MiniTest::Test.reset
-        require File.absolute_path(arg)
-        ::MiniTest::Test.runnables.
-          reject { |s| s.runnable_methods.empty? }.
-          each do |s|
-            yield s.name, arg
-          end
-      end
+    def all_suite_paths
+      ARGV
     end
 
-    def load_suite(suite_name, path)
-      @suites ||= {}
-
-      suite = @suites[suite_name]
-      return suite if suite
-
+    def suites_from_path(path, raise_on_error)
       ::MiniTest::Test.reset
       begin
         require File.absolute_path(path)
       rescue LoadError
-        return nil
+        raise if raise_on_error
+        return []
       end
       ::MiniTest::Test.runnables.
         reject { |s| s.runnable_methods.empty? }.
-        each do |s|
-          @suites[s.name] = s
-        end
-
-      @suites[suite_name]
-    end
-
-    def filter_suites(suites)
-      paths = ARGV.to_set
-      suites.select { |suite| paths.include?(suite.path) }
+        map { |s| [s.name, s] }
     end
   end
 end

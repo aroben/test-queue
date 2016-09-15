@@ -63,50 +63,29 @@ module TestQueue
       @runtime ||= ::Cucumber::Runtime.new(cli.configuration)
     end
 
-    def discover_suites
-      # FIXME: This loads all features at once before yielding any of them. It
-      # would be nice to yield them as they're loaded to reduce startup
-      # latency.
-      runtime.send(:features).each do |document|
-        if document.respond_to?(:uri)
-          yield File.basename(document.uri), document.uri
-        else
-          yield document.title, document.file
-        end
+    def all_test_files
+      if runtime.respond_to?(:feature_files, true)
+        runtime.send(:feature_files)
+      else
+        cli.configuration.feature_files
       end
     end
 
-    def load_suite(suite_name, path)
-      @suites ||= {}
-
-      suite = @suites[suite_name]
-      return suite if suite
-
-      if defined?(::Cucumber::Runtime::FeaturesLoader)
+    def suites_from_file(path, raise_on_error)
+      # FIXME: Support raise_on_error
+      if defined?(::Cucumber::Core::Gherkin::Document)
+        source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
+        doc = ::Cucumber::Core::Gherkin::Document.new(path, source)
+        [File.basename(doc.uri), doc]
+      else
         loader =
           ::Cucumber::Runtime::FeaturesLoader.new([path],
                                                   cli.configuration.filters,
                                                   cli.configuration.tag_expression)
-        loader.features.each do |feature|
-          @suites[feature.title] = feature
-        end
-      else
-        source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
-        doc = Cucumber::Core::Gherkin::Document.new(path, source)
-        @suites[File.basename(doc.uri)] = doc
+        loader.features.map { |feature| [feature.title, feature] }
       end
 
       @suites[suite_name]
-    end
-
-    def filter_suites(suites)
-      files = if runtime.respond_to?(:feature_files, true)
-                runtime.send(:feature_files)
-              else
-                cli.configuration.feature_files
-              end
-      files = Set.new(files)
-      suites.select { |suite| files.include?(suite.path) }
     end
   end
 end

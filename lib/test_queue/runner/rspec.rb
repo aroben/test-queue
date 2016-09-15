@@ -32,39 +32,29 @@ module TestQueue
   end
 
   class TestFramework
-    def discover_suites
+    def all_suite_paths
       options = RSpec::Core::ConfigurationOptions.new(ARGV)
       options.parse_options if options.respond_to?(:parse_options)
       options.configure(RSpec.configuration)
 
-      RSpec.configuration.files_to_run.uniq.each do |file|
-        RSpec.world.reset
-        load file
-        split_groups(RSpec.world.example_groups).each do |example_or_group|
-          name = example_or_group.respond_to?(:id) ? example_or_group.id : example_or_group.to_s
-          yield name, file
-        end
-      end
+      RSpec.configuration.files_to_run.uniq
     end
-
-    def load_suite(suite_name, path)
-      @suites ||= {}
-
-      suite = @suites[suite_name]
-      return suite if suite
-
+    
+    def suites_from_path(path, raise_on_error)
       RSpec.world.reset
       begin
         load path
       rescue LoadError
-        return nil
+        raise if raise_on_error
+        return []
       end
-      split_groups(RSpec.world.example_groups).each do |example_or_group|
+      split_groups(RSpec.world.example_groups).map { |example_or_group|
         name = example_or_group.respond_to?(:id) ? example_or_group.id : example_or_group.to_s
-        @suites[name] = example_or_group
-      end
-      @suites[suite_name]
+        [name, example_or_group]
+      }
     end
+
+    private
 
     def split_groups(groups)
       return groups unless split_groups?
