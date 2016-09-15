@@ -84,8 +84,6 @@ module TestQueue
                                                   cli.configuration.tag_expression)
         loader.features.map { |feature| [feature.title, feature] }
       end
-
-      @suites[suite_name]
     end
   end
 end
