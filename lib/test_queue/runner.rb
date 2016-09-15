@@ -279,10 +279,6 @@ module TestQueue
     def discover_suites
       return if relay?
       @discovering_suites_pid = fork do
-        # Create our own process group so the master process doesn't confuse us
-        # for a worker.
-        Process.setpgid(0, 0)
-
         @test_framework.discover_suites do |suite_name, path|
           @server.connect_address.connect do |sock|
             sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
