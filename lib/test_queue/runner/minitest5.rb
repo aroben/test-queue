@@ -77,9 +77,9 @@ module TestQueue
     def suites_from_path(path)
       ::MiniTest::Test.reset
       require File.absolute_path(path)
-      ::MiniTest::Test.runnables.
-        reject { |s| s.runnable_methods.empty? }.
-        map { |s| [s.name, s] }
+      ::MiniTest::Test.runnables
+        .reject { |s| s.runnable_methods.empty? }
+        .map { |s| [s.name, s] }
     end
   end
 end
