@@ -95,3 +95,17 @@ teardown() {
   assert_status 0
   refute_output_contains "Meme::when asked about blending possibilities"
 }
+
+@test "minitest-queue handles suites changing inside a file" {
+  cp test/samples/sample_minispec.rb $SCRATCH
+
+  run bundle exec minitest-queue $SCRATCH/sample_minispec.rb
+  assert_status 0
+  assert_output_contains "Meme::when asked about blending possibilities"
+
+  sed -i'' -e 's/Meme/Meme2/g' $SCRATCH/sample_minispec.rb
+
+  run bundle exec minitest-queue $SCRATCH/sample_minispec.rb
+  assert_status 0
+  assert_output_contains "Meme2::when asked about blending possibilities"
+}
