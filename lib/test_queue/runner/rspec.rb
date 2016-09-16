@@ -44,7 +44,13 @@ module TestQueue
       RSpec.world.reset
       load path
       split_groups(RSpec.world.example_groups).map { |example_or_group|
-        name = example_or_group.respond_to?(:id) ? example_or_group.id : example_or_group.to_s
+        name = if example_or_group.respond_to?(:id)
+                 example_or_group.id
+               elsif example_or_group.respond_to?(:full_description)
+                 example_or_group.full_description
+               else
+                 example_or_group.metadata[:example_group][:full_description]
+               end
         [name, example_or_group]
       }
     end
@@ -54,7 +60,6 @@ module TestQueue
     def split_groups(groups)
       return groups unless split_groups?
 
-      # FIXME: Need a test for this.
       groups_to_split, groups_to_keep = [], []
       groups.each do |group|
         (group.metadata[:no_split] ? groups_to_keep : groups_to_split) << group
