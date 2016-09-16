@@ -16,7 +16,23 @@ module Cucumber
   end
 
   class Runtime
-    attr_writer :features
+    if defined?(::Cucumber::Runtime::FeaturesLoader)
+      module InjectableFeatures
+        def features
+          return @features if defined?(@features)
+          super
+        end
+
+        def features=(iterator)
+          @features = ::Cucumber::Ast::Features.new
+          @features.features = iterator
+        end
+      end
+
+      prepend InjectableFeatures
+    else
+      attr_writer :features
+    end
   end
 end
 
@@ -25,12 +41,7 @@ module TestQueue
     class Cucumber < Runner
       def run_worker(iterator)
         runtime = @test_framework.runtime
-
-        if defined?(::Cucumber::Runtime::FeaturesLoader)
-          runtime.send(:features).features = iterator
-        else
-          runtime.features = iterator
-        end
+        runtime.features = iterator
 
         @test_framework.cli.execute!(runtime)
 
