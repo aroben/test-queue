@@ -38,7 +38,7 @@ teardown() {
   run bundle exec cucumber-queue README.md --require test/samples/features/step_definitions
   assert_status 1
   # Cucumber 1 and 2 give different error output here.
-  assert_output_contains 'Aborting: Discovering suites failed\.\|README\.md: Parser errors:'
+  assert_output_matches 'Aborting: Discovering suites failed\.|README\.md: Parser errors:'
 }
 
 @test "cucumber-queue handles test file being deleted" {
