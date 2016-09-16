@@ -17,6 +17,10 @@ module Cucumber
 
   class Runtime
     if defined?(::Cucumber::Runtime::FeaturesLoader)
+      # Without this module, Runtime#features would load all features specified
+      # on the command line. We want to avoid that and load only the features
+      # each worker needs ourselves, so we override the default behavior to let
+      # us put our iterator in place without loading any features directly.
       module InjectableFeatures
         def features
           return @features if defined?(@features)
