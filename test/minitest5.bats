@@ -1,7 +1,15 @@
 load "testlib"
 
+SCRATCH=tmp/minitest5-tests
+
 setup() {
   require_gem "minitest" ">= 5.0"
+  rm -rf $SCRATCH
+  mkdir -p $SCRATCH
+}
+
+teardown() {
+  rm -rf $SCRATCH
 }
 
 @test "minitest-queue (minitest5) succeeds when all tests pass" {
@@ -54,22 +62,36 @@ setup() {
   assert_output_contains "MiniTestFailure#test_fail"
 }
 
-@test "fails when TEST_QUEUE_WORKERS is <= 0" {
+@test "minitest-queue fails when TEST_QUEUE_WORKERS is <= 0" {
   export TEST_QUEUE_WORKERS=0
   run bundle exec minitest-queue ./test/samples/sample_minitest5.rb
   assert_status 1
   assert_output_contains "Worker count (0) must be greater than 0"
 }
 
-@test "fails when given a missing test file" {
+@test "minitest-queue fails when given a missing test file" {
   run bundle exec minitest-queue ./test/samples/does_not_exist.rb
   assert_status 1
   assert_output_contains "Aborting: Discovering suites failed"
 }
 
-@test "fails when given a malformed test file" {
+@test "minitest-queue fails when given a malformed test file" {
   [ -f README.md ]
   run bundle exec minitest-queue README.md
   assert_status 1
   assert_output_contains "Aborting: Discovering suites failed"
+}
+
+@test "minitest-queue handles test file being deleted" {
+  cp test/samples/sample_mini{test5,spec}.rb $SCRATCH
+
+  run bundle exec minitest-queue $SCRATCH/*
+  assert_status 0
+  assert_output_contains "Meme::when asked about blending possibilities"
+
+  rm $SCRATCH/sample_minispec.rb
+
+  run bundle exec minitest-queue $SCRATCH/*
+  assert_status 0
+  refute_output_contains "Meme::when asked about blending possibilities"
 }
