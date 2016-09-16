@@ -60,3 +60,16 @@ setup() {
   assert_status 1
   assert_output_contains "Worker count (0) must be greater than 0"
 }
+
+@test "fails when given a missing test file" {
+  run bundle exec minitest-queue ./test/samples/does_not_exist.rb
+  assert_status 1
+  assert_output_contains "Aborting: Discovering suites failed"
+}
+
+@test "fails when given a malformed test file" {
+  [ -f README.md ]
+  run bundle exec minitest-queue README.md
+  assert_status 1
+  assert_output_contains "Aborting: Discovering suites failed"
+}

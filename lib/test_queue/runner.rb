@@ -291,7 +291,6 @@ module TestQueue
           end
         end
 
-        # FIXME: Need a test that things fail when this returns 1.
         Kernel.exit! 0
       end
     end
@@ -407,10 +406,7 @@ module TestQueue
         # Make sure our discovery process is still doing OK.
         if @discovering_suites_pid && Process.waitpid(@discovering_suites_pid, Process::WNOHANG) != nil
           @discovering_suites_pid = nil
-          unless $?.success?
-            STDERR.puts "Discovering suites failed. Aborting."
-            break
-          end
+          abort("Discovering suites failed.") unless $?.success?
         end
 
         if IO.select([@server], nil, nil, 0.1).nil?
