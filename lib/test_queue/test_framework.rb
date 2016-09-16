@@ -1,7 +1,7 @@
 module TestQueue
   # This class provides an abstraction over the various test frameworks we
-  # support. The framework-specific implementations are defined in the various
-  # test_queue/runner/* files. This file just defines the interface.
+  # support. The framework-specific subclasses are defined in the various
+  # test_queue/runner/* files.
   class TestFramework
     # Return all file paths to load test suites from.
     #

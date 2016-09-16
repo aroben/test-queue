@@ -60,7 +60,7 @@ module TestQueue
         if ::MiniTest::Unit::TestCase.original_test_suites.any?
           fail "Do not `require` test files. Pass them via ARGV instead and they will be required as needed."
         end
-        super
+        super(TestFramework::MiniTest.new)
       end
 
       def run_worker(iterator)
@@ -71,16 +71,18 @@ module TestQueue
   end
 
   class TestFramework
-    def all_suite_paths
-      ARGV
-    end
+    class MiniTest < TestFramework
+      def all_suite_paths
+        ARGV
+      end
 
-    def suites_from_path(path)
-      ::MiniTest::Unit::TestCase.reset
-      require File.absolute_path(path)
-      ::MiniTest::Unit::TestCase.original_test_suites.map { |suite|
-        [suite.name, suite]
-      }
+      def suites_from_path(path)
+        ::MiniTest::Unit::TestCase.reset
+        require File.absolute_path(path)
+        ::MiniTest::Unit::TestCase.original_test_suites.map { |suite|
+          [suite.name, suite]
+        }
+      end
     end
   end
 end

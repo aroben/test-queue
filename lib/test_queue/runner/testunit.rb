@@ -39,7 +39,7 @@ module TestQueue
         if Test::Unit::Collector::Descendant.new.collect.tests.any?
           fail "Do not `require` test files. Pass them via ARGV instead and they will be required as needed."
         end
-        super
+        super(TestFramework::TestUnit.new)
       end
 
       def run_worker(iterator)
@@ -57,16 +57,18 @@ module TestQueue
   end
 
   class TestFramework
-    def all_suite_paths
-      ARGV
-    end
+    class TestUnit < TestFramework
+      def all_suite_paths
+        ARGV
+      end
 
-    def suites_from_path(path)
-      Test::Unit::TestCase::DESCENDANTS.clear
-      require File.absolute_path(path)
-      Test::Unit::Collector::Descendant.new.collect.tests.map { |suite|
-        [suite.name, suite]
-      }
+      def suites_from_path(path)
+        Test::Unit::TestCase::DESCENDANTS.clear
+        require File.absolute_path(path)
+        Test::Unit::Collector::Descendant.new.collect.tests.map { |suite|
+          [suite.name, suite]
+        }
+      end
     end
   end
 end

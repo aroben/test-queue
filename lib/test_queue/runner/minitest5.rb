@@ -59,7 +59,7 @@ module TestQueue
         if ::MiniTest::Test.runnables.any? { |r| r.runnable_methods.any? }
           fail "Do not `require` test files. Pass them via ARGV instead and they will be required as needed."
         end
-        super
+        super(TestFramework::MiniTest.new)
       end
 
       def run_worker(iterator)
@@ -70,16 +70,18 @@ module TestQueue
   end
 
   class TestFramework
-    def all_suite_paths
-      ARGV
-    end
+    class MiniTest < TestFramework
+      def all_suite_paths
+        ARGV
+      end
 
-    def suites_from_path(path)
-      ::MiniTest::Test.reset
-      require File.absolute_path(path)
-      ::MiniTest::Test.runnables
-        .reject { |s| s.runnable_methods.empty? }
-        .map { |s| [s.name, s] }
+      def suites_from_path(path)
+        ::MiniTest::Test.reset
+        require File.absolute_path(path)
+        ::MiniTest::Test.runnables
+          .reject { |s| s.runnable_methods.empty? }
+          .map { |s| [s.name, s] }
+      end
     end
   end
 end

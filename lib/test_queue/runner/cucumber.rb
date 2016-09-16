@@ -43,6 +43,10 @@ end
 module TestQueue
   class Runner
     class Cucumber < Runner
+      def initialize
+        super(TestFramework::Cucumber.new)
+      end
+
       def run_worker(iterator)
         runtime = @test_framework.runtime
         runtime.features = iterator
@@ -65,38 +69,40 @@ module TestQueue
   end
 
   class TestFramework
-    class FakeKernel
-      def exit(n)
+    class Cucumber < TestFramework
+      class FakeKernel
+        def exit(n)
+        end
       end
-    end
 
-    def cli
-      @cli ||= ::Cucumber::Cli::Main.new(ARGV.dup, $stdin, $stdout, $stderr, FakeKernel.new)
-    end
-
-    def runtime
-      @runtime ||= ::Cucumber::Runtime.new(cli.configuration)
-    end
-
-    def all_suite_paths
-      if runtime.respond_to?(:feature_files, true)
-        runtime.send(:feature_files)
-      else
-        cli.configuration.feature_files
+      def cli
+        @cli ||= ::Cucumber::Cli::Main.new(ARGV.dup, $stdin, $stdout, $stderr, FakeKernel.new)
       end
-    end
 
-    def suites_from_path(path)
-      if defined?(::Cucumber::Core::Gherkin::Document)
-        source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
-        doc = ::Cucumber::Core::Gherkin::Document.new(path, source)
-        [[File.basename(doc.uri), doc]]
-      else
-        loader =
-          ::Cucumber::Runtime::FeaturesLoader.new([path],
-                                                  cli.configuration.filters,
-                                                  cli.configuration.tag_expression)
-        loader.features.map { |feature| [feature.title, feature] }
+      def runtime
+        @runtime ||= ::Cucumber::Runtime.new(cli.configuration)
+      end
+
+      def all_suite_paths
+        if runtime.respond_to?(:feature_files, true)
+          runtime.send(:feature_files)
+        else
+          cli.configuration.feature_files
+        end
+      end
+
+      def suites_from_path(path)
+        if defined?(::Cucumber::Core::Gherkin::Document)
+          source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
+          doc = ::Cucumber::Core::Gherkin::Document.new(path, source)
+          [[File.basename(doc.uri), doc]]
+        else
+          loader =
+            ::Cucumber::Runtime::FeaturesLoader.new([path],
+                                                    cli.configuration.filters,
+                                                    cli.configuration.tag_expression)
+          loader.features.map { |feature| [feature.title, feature] }
+        end
       end
     end
   end

@@ -31,9 +31,9 @@ module TestQueue
     attr_accessor :concurrency, :exit_when_done
     attr_reader :stats
 
-    def initialize
+    def initialize(test_framework)
+      @test_framework = test_framework
       @stats = Stats.new(stats_file)
-      @test_framework = TestFramework.new
 
       if ENV['TEST_QUEUE_EARLY_FAILURE_LIMIT']
         begin
