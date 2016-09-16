@@ -75,14 +75,9 @@ module TestQueue
       ARGV
     end
 
-    def suites_from_path(path, raise_on_error)
+    def suites_from_path(path)
       ::MiniTest::Unit::TestCase.reset
-      begin
-        require File.absolute_path(path)
-      rescue LoadError
-        raise if raise_on_error
-        return []
-      end
+      require File.absolute_path(path)
       ::MiniTest::Unit::TestCase.original_test_suites.map { |suite|
         [suite.name, suite]
       }

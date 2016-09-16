@@ -74,14 +74,9 @@ module TestQueue
       ARGV
     end
 
-    def suites_from_path(path, raise_on_error)
+    def suites_from_path(path)
       ::MiniTest::Test.reset
-      begin
-        require File.absolute_path(path)
-      rescue LoadError
-        raise if raise_on_error
-        return []
-      end
+      require File.absolute_path(path)
       ::MiniTest::Test.runnables.
         reject { |s| s.runnable_methods.empty? }.
         map { |s| [s.name, s] }

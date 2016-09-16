@@ -93,7 +93,7 @@ module TestQueue
       suite = @loaded_suites[suite_name]
       return suite if suite
 
-      @test_framework.suites_from_path(path, false).each do |name, suite|
+      @test_framework.suites_from_path(path).each do |name, suite|
         @loaded_suites[name] = suite
       end
       @loaded_suites[suite_name]

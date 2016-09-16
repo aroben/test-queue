@@ -40,14 +40,9 @@ module TestQueue
       RSpec.configuration.files_to_run.uniq
     end
     
-    def suites_from_path(path, raise_on_error)
+    def suites_from_path(path)
       RSpec.world.reset
-      begin
-        load path
-      rescue LoadError
-        raise if raise_on_error
-        return []
-      end
+      load path
       split_groups(RSpec.world.example_groups).map { |example_or_group|
         name = example_or_group.respond_to?(:id) ? example_or_group.id : example_or_group.to_s
         [name, example_or_group]

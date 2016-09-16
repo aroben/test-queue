@@ -82,8 +82,7 @@ module TestQueue
       end
     end
 
-    def suites_from_path(path, raise_on_error)
-      # FIXME: Support raise_on_error
+    def suites_from_path(path)
       if defined?(::Cucumber::Core::Gherkin::Document)
         source = ::Cucumber::Runtime::NormalisedEncodingFile.read(path)
         doc = ::Cucumber::Core::Gherkin::Document.new(path, source)

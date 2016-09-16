@@ -61,14 +61,9 @@ module TestQueue
       ARGV
     end
 
-    def suites_from_path(path, raise_on_error)
+    def suites_from_path(path)
       Test::Unit::TestCase::DESCENDANTS.clear
-      begin
-        require File.absolute_path(path)
-      rescue LoadError
-        raise if raise_on_error
-        return []
-      end
+      require File.absolute_path(path)
       Test::Unit::Collector::Descendant.new.collect.tests.map { |suite|
         [suite.name, suite]
       }

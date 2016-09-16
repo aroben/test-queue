@@ -9,23 +9,20 @@ module TestQueue
     # line, or defer to the underlying test framework to determine which files
     # to load.
     #
-    # Returns an Array of String file paths.
+    # Returns an Enumerable of String file paths.
     def all_suite_paths
       raise NotImplementedError
     end
 
     # Load all suites from the specified path.
     #
-    # path           - String file path to load suites from
-    # raise_on_error - Boolean indicating whether to raise an exception if
-    #                  suites cannot be loaded from the path (e.g., because
-    #                  there is no file at that path)
+    # path - String file path to load suites from
     #
-    # Returns an Array of tuples containing:
+    # Returns an Enumerable of tuples containing:
     #   suite_name   - String that uniquely identifies this suite
     #   suite        - Framework-specific object that can be used to actually
     #                  run the suite
-    def suites_from_path(path, raise_on_error)
+    def suites_from_path(path)
       raise NotImplementedError
     end
   end

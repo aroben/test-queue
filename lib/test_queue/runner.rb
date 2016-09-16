@@ -284,7 +284,7 @@ module TestQueue
       return if relay?
       @discovering_suites_pid = fork do
         @test_framework.all_suite_paths.each do |path|
-          @test_framework.suites_from_path(path, true).each do |suite_name, suite|
+          @test_framework.suites_from_path(path).each do |suite_name, suite|
             @server.connect_address.connect do |sock|
               sock.puts("NEW SUITE #{Marshal.dump([suite_name, path])}")
             end
