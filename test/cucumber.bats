@@ -46,11 +46,11 @@ teardown() {
 
   run bundle exec cucumber-queue $SCRATCH --require test/samples/features/step_definitions
   assert_status 0
-  assert_output_contains "Feature: Foobar$"
+  assert_output_matches "Feature: Foobar$"
 
   rm $SCRATCH/sample.feature
 
   run bundle exec cucumber-queue $SCRATCH --require test/samples/features/step_definitions
   assert_status 0
-  refute_output_contains "Feature: Foobar$"
+  refute_output_matches "Feature: Foobar$"
 }
