@@ -255,6 +255,7 @@ module TestQueue
 
     def discover_suites
       return if relay?
+      @discovering_suites = true
       @discovering_suites_pid = fork do
         @test_framework.all_suite_paths.each do |path|
           @test_framework.suites_from_path(path).each do |suite_name, suite|
@@ -371,12 +372,13 @@ module TestQueue
       return if relay?
       remote_workers = 0
 
-      until @discovering_suites_pid.nil? && @queue.empty? && remote_workers == 0
+      until !@discovering_suites && @queue.empty? && remote_workers == 0
         queue_status(@start_time, @queue.size, @workers.size, remote_workers)
 
         # Make sure our discovery process is still doing OK.
         if @discovering_suites_pid && Process.waitpid(@discovering_suites_pid, Process::WNOHANG) != nil
           @discovering_suites_pid = nil
+          @discovering_suites = false
           abort("Discovering suites failed.") unless $?.success?
         end
 
@@ -391,7 +393,7 @@ module TestQueue
             if obj = @queue.shift
               data = Marshal.dump(obj)
               sock.write(data)
-            elsif @discovering_suites_pid
+            elsif @discovering_suites
               sock.write(Marshal.dump("WAIT"))
             end
           when /^SLAVE (\d+) ([\w\.-]+) (\w+)(?: (.+))?/
